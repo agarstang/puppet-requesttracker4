@@ -1,0 +1,52 @@
+<VirtualHost *:443>
+
+	ServerAdmin <%= @corraddr %>
+	
+	SSLEngine On
+	SSLCertificateFile /etc/ssl/certs/ssl-cert-snakeoil.pem
+	SSLCertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key
+	
+	ErrorLog ${APACHE_LOG_DIR}/tracker_error.log
+	CustomLog ${APACHE_LOG_DIR}/tracker_access.log combined
+
+	# To use RT together with mod_perl2, available in the
+	# libapache2-mod-perl2 package, include this file with:
+	#
+	#   Include /etc/request-tracker4/apache2-modperl2.conf
+	#
+	# into your Apache configuration file, in a virtual host section.
+
+	# You will need to enable the Apache modules: perl, actions
+	#
+	# The best place for this in the Debian Apache2 default situation is
+	# near the end of the VirtualHost section in the file
+	# /etc/apache2/sites-available/default.
+
+	# You might want to enable this line
+	# AddDefaultCharset UTF-8
+
+	PerlSetEnv RT_SITE_CONFIG /opt/rt4/etc/RT_SiteConfig.pm
+
+	# You might need to alter references to /rt in this file (there are
+	# three) to match whatever base URL you are using for your RT site
+	Alias /tracker /opt/rt4/share/html
+
+	<Location /tracker>
+	  Require all granted
+	  SetHandler modperl
+	  PerlResponseHandler Plack::Handler::Apache2
+	  PerlSetVar psgi_app /opt/rt4/sbin/rt-server
+	</Location>
+
+	# Limit mail gateway access to localhost by default
+	<Location /tracker/REST/1.0/NoAuth>
+		Order Allow,Deny
+		Allow from 127.0.0.1
+	</Location>
+
+	<Perl>
+	  use Plack::Handler::Apache2;
+	  Plack::Handler::Apache2->preload("/opt/rt4/sbin/rt-server");
+	</Perl>
+
+</VirtualHost>
