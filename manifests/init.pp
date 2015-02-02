@@ -20,32 +20,32 @@ class requesttracker4($tz='Europe/London',
 	$url = "http://download.bestpractical.com/pub/rt/release/rt-${version}.tar.gz"
 	
 	package { 'apache2': ensure => present,
-						 before => Class['apache_files']	}
+						before => Class['apache_files']	}
 	package { 'exim4': ensure => present,
-                       before => Class['exim_files']	}
+						before => Class['exim_files']	}
 	package { 'exim4-daemon-heavy': ensure => present,
-                       before => Class['exim_files']	}
-    
+						before => Class['exim_files']	}
+
 	service { 'apache2':
-        ensure => running,
-        hasstatus => true,
-        hasrestart => true,
-    }
+		ensure => running,
+		hasstatus => true,
+		hasrestart => true,
+	}
 	
 	service { 'exim4':
-        ensure => running,
-        hasstatus => true,
-        hasrestart => true,
-    }
+		ensure => running,
+		hasstatus => true,
+		hasrestart => true,
+	}
 	
 	user { 'rtcrontool':
-        comment => 'User for automating RT with rt-crontool',
-        home => '/opt/rt4',
-        ensure => present,
+		comment => 'User for automating RT with rt-crontool',
+		home => '/opt/rt4',
+		ensure => present,
 		shell => '/bin/false',
 		groups => ['www-data'],
-    }
-	
+	}
+
 	class rt_packages inherits requesttracker4 {
 		
 		Package { ensure => present }
@@ -141,9 +141,9 @@ class requesttracker4($tz='Europe/London',
 			'ucf': ;
 		}
 	}
-	
+
 	class apache_files inherits requesttracker4 {
-		
+	
 		file { '/etc/apache2/sites-available/000-default-ssl.conf':
 			ensure  => present,
 			mode    => '0640',
@@ -151,9 +151,10 @@ class requesttracker4($tz='Europe/London',
 			owner	=> 'root',
 			group	=> 'www-data',
 			notify  => Service['apache2'],
-		}		
-	}
+		}
 	
+	}
+
 	class rt_files inherits requesttracker4 {
 		
 		file { '/opt/rt4/etc/RT_SiteConfig.pm':
@@ -174,7 +175,7 @@ class requesttracker4($tz='Europe/London',
 		#	group	=> 'root',
 		#}
 	}
-	
+
 	class exim_files inherits requesttracker4 {
 		
 		file { '/etc/exim4/exim4.conf':
@@ -194,13 +195,13 @@ class requesttracker4($tz='Europe/London',
 	
 	
 	exec { 'rt download':
-        command => "wget ${url} -O - | tar xz --transform 's/^rt-${version}/rt4/' -C /tmp",
+		command => "wget ${url} -O - | tar xz --transform 's/^rt-${version}/rt4/' -C /tmp",
 		path => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-        creates => '/tmp/rt4/bin/rt',
+		creates => '/tmp/rt4/bin/rt',
 		timeout => 360,
 		before => Exec['rt configure'],
-    }
-	
+	}
+
 	file { '/tmp/rt4/cpanm_deps.sh':
 		ensure  => file,
 		mode    => '0777',
@@ -209,30 +210,30 @@ class requesttracker4($tz='Europe/London',
 		group	=> 'root',
 		require  => [Exec['rt download'],Class['rt_packages']],
 	}
-	
+
 	exec { 'rt configure':
         command => '/tmp/rt4/configure --with-db-type=Pg --enable-graphviz --enable-gd',
 		path => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
 		cwd => '/tmp/rt4',
 		before => Exec['rt make dependencies'],
     }
-	
+
 	exec { 'rt make dependencies':
-        command => '/tmp/rt4/cpanm_deps.sh',
+		command => '/tmp/rt4/cpanm_deps.sh',
 		path => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
 		cwd => '/tmp/rt4',
-        environment => 'PERL_MM_USE_DEFAULT=1',
+		environment => 'PERL_MM_USE_DEFAULT=1',
 		timeout => 0,
 		before => Exec['rt make install'],
     }
-	
+
 	exec { 'rt make install':
-        command => 'make install',
+		command => 'make install',
 		path => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
 		creates => '/opt/rt4/bin/rt',
 		cwd => '/tmp/rt4',
 		timeout => 0,
 		before => Class['rt_files'],
-    }
-	
+	}
+
 }
